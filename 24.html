@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Таблица данных</title>
+  <style>
+    body {
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      flex-direction: column;
+    }
+    span {
+      margin-top: 200px;
+      width: fit-content;
+      position: absolute;
+      display: flex;
+      align-items: center; 
+      justify-content: center; 
+    }
+    table {
+      border-collapse: collapse;
+      min-width: 1200px;
+      max-width: 1200px;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      cursor: pointer;
+      transition: 300ms ease all;
+    }
+    th:hover {
+      background-color: lightgray;
+    }
+    button {
+      border: none;
+      border-radius: 5px;
+      background: none;
+      margin: 0;
+      padding: 5px;
+      width: auto;
+      overflow: visible;
+      transition: 300ms ease all;
+    }
+    button:hover {
+      background: lightgray;
+      cursor: pointer;
+    }
+    .active {
+      background-color: lightblue;
+    }
+  </style>
+</head>
+<body>
+  <table 
+    id="data-table">
+    <thead id="data-head"></thead>
+    <tbody id="data-body"></tbody>
+  </table>
+  <div 
+    style="display: flex; justify-content: center; align-items: center; gap: 5px; margin: 10px;" 
+    id="pagination">
+  </div>
+
+  <script>
+    // Переменная для хранения данных
+    let data = []
+
+    // fetch data
+    async function fetchData() {
+      const rez = await fetch('http://www.filltext.com/?rows=1000&fname=%7BfirstName%7D&lname=%7BlastName%7D&tel=%7Bphone%7Cformat%7D&address=%7BstreetAddress%7D&city=%7Bcity%7D&state=%7BusState%7Cabbr%7D&zip=%7Bzip%7D&pretty=true')
+      const toJson = await rez.json() 
+      // console.log('toJson', toJson)
+      return toJson
+    } 
+
+    // Переменные для пагинации
+    let currentPage = 1;
+    const rowsPerPage = 50;
+
+    // Функция загрузки данных при загрузке страницы
+    window.onload = async function() {
+      // Добавляем плейсхолдер под загрузку
+      const loader = document.createElement('span');
+      document.body.append(loader)
+      loader.innerHTML = "<span>Загрузка...</span>";
+
+      // Добываем дату
+      data = await fetchData()
+
+      // Убираем плейсхолдер и отрисовываем шапку
+      loader.remove()
+      const tableHead = document.getElementById("data-head");
+
+      tableHead.innerHTML = `
+        <tr>
+          <th style="width: 100px;" onclick="sortTable(0)">Имя</th>
+          <th style="width: 100px;" onclick="sortTable(1)">Фамилия</th>
+          <th style="width: 100px;" onclick="sortTable(2)">Телефон</th>
+          <th style="width: 100px;" onclick="sortTable(3)">Адрес</th>
+          <th style="width: 100px;" onclick="sortTable(4)">Город</th>
+          <th style="width: 100px;" onclick="sortTable(5)">Штат</th>
+          <th style="width: 100px;" onclick="sortTable(6)">Почтовый индекс</th>
+        </tr>
+      `
+      // Раскидываем полученные данные
+      loadTableData();
+    };
+
+    // Функция загрузки данных в таблицу
+    async function loadTableData() {
+      const table = document.getElementById("data-body");
+
+      // Очистка таблицы перед загрузкой новых данных
+      table.innerHTML = "";
+
+      // Расчет индексов начала и конца текущей страницы
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const endIndex = startIndex + rowsPerPage;
+
+      // Получение данных для текущей страницы
+      const currentPageData = data.slice(startIndex, endIndex);
+
+      // Заполнение таблицы данными
+      for (let i = 0; i < currentPageData.length; i++) {
+        const row = table.insertRow(i);
+        const rowData = currentPageData[i];
+
+        const firstNameCell = row.insertCell(0);
+        firstNameCell.innerHTML = rowData.fname;
+
+        const lastNameCell = row.insertCell(1);
+        lastNameCell.innerHTML = rowData.lname;
+
+        const phoneCell = row.insertCell(2);
+        phoneCell.innerHTML = rowData.tel;
+
+        const addressCell = row.insertCell(3);
+        addressCell.innerHTML = rowData.address;
+
+        const cityCell = row.insertCell(4);
+        cityCell.innerHTML = rowData.city;
+
+        const stateCell = row.insertCell(5);
+        stateCell.innerHTML = rowData.state;
+
+        const zipCell = row.insertCell(6);
+        zipCell.innerHTML = rowData.zip;
+      }
+
+      // Генерация пагинации
+      generatePagination();
+    }
+
+    // Функция сортировки таблицы по заданному столбцу
+    function sortTable(column) {
+        const table = document.getElementById("data-table");
+        const rows = Array.from(table.rows);
+
+        rows.shift(); // Пропуск заголовка таблицы
+
+        rows.sort((a, b) => {
+            const aValue = a.cells[column].innerHTML;
+            const bValue = b.cells[column].innerHTML;
+
+            return aValue.localeCompare(bValue);
+        });
+
+        const isAscending = table.rows[0].cells[column].classList.toggle("active");
+        if (!isAscending) {
+            rows.reverse();
+        }
+
+        // Удаление всех строк из таблицы
+        table.tBodies[0].innerHTML = "";
+
+        // Добавление отсортированных строк обратно в таблицу
+        table.tBodies[0].append(...rows);
+
+        // Удаление класса "active" у других заголовков таблицы
+        Array.from(table.rows[0].cells)
+            .filter((cell, index) => index !== column)
+            .forEach(cell => cell.classList.remove("active"));
+    }
+
+    // Функция генерации пагинации
+    function generatePagination() {
+      const pagination = document.getElementById("pagination");
+      pagination.innerHTML = "";
+
+      // Расчет количества страниц
+      const totalPages = Math.ceil(data.length / rowsPerPage);
+
+      // Создание кнопок для каждой страницы
+      for (let i = 1; i <= totalPages; i++) {
+        const button = document.createElement("button");
+        button.innerHTML = i;
+        button.addEventListener("click", () => {
+          currentPage = i;
+          loadTableData();
+        });
+        // Добавление класса "active" для активной страницы
+          if (i === currentPage) {
+            button.classList.add("active");
+          }
+        pagination.appendChild(button);
+      }
+      
+    }
+  </script>
+</body>
+</html>

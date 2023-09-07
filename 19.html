@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VKontakte Widget</title>
+  <style>
+    #widget {
+      width: 500px;
+      height: 500px;
+      border: 1px solid teal;
+      overflow-y: scroll;
+    }
+    .post__div {
+        padding: 10px;
+    }
+    .container {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <div id="widget"></div>
+    </div>
+
+  <script>
+    // Функция для загрузки постов из VK API
+    function loadPosts(offset) {
+      const groupId = '9695053' // ID группы ВКонтакте
+      const accessToken = 'bda0a999bda0a999bda0a9993cbeb52346bbda0bda0a999d9588e23a7261ca4dd516aa8'; // Cервисный ключ доступа
+
+      // Формируем URL для запроса к VK API
+      const apiUrl = `https://api.vk.com/method/wall.get?owner_id=-${groupId}&offset=${offset}&count=20&access_token=${accessToken}&v=5.131&callback=processResponse`;
+
+      // Создаем скрипт для выполнения запроса JSONP
+      const script = document.createElement('script');
+      script.src = apiUrl;
+
+      // Добавляем скрипт на страницу
+      document.body.appendChild(script);
+    }
+
+    // Глобальная функция, вызываемая после выполнения запроса JSONP
+    async function processResponse(response) {
+      // console.log('im here')
+      if (response && response.response && response.response.items) {
+        const posts = response.response.items;
+        // console.log('first posts', posts)
+
+        // Обновление списка постов
+        const widget = document.getElementById('widget');
+
+        posts.forEach(post => {
+          const postElement = document.createElement('div');
+          postElement.className = 'post__div'
+
+          postElement.textContent = post.text !== '' ? `${post.text}` : `Рекламный пост`
+
+          widget.appendChild(postElement);
+        });
+
+        // Сохранение данных в кэш
+        const cachedData = localStorage.getItem('cachedPosts');
+        const cachedPosts = cachedData ? JSON.parse(cachedData) : [];
+        const updatedPosts = cachedPosts.concat(posts);
+        
+        // Пробуем подгрузить новые посты
+        try {
+            localStorage.setItem('cachedPosts', JSON.stringify(updatedPosts));
+            await calculateStorageSize();
+        } catch (e) { 
+            console.log(e)
+            console.log('Cleaning first 50 posts')
+            updatedPosts.splice(0, 50); // Количество постов, которые нужно удалить при переполнении c запасом
+            localStorage.setItem('cachedPosts', JSON.stringify(updatedPosts));
+            await calculateStorageSize();
+        }
+      }
+    }
+
+    // Загрузка постов при загрузке страницы
+    window.onload = function() {
+      const cachedData = localStorage.getItem('cachedPosts');
+      const cachedPosts = cachedData ? JSON.parse(cachedData) : [];
+      const widget = document.getElementById('widget');
+      // console.log('cachedPosts', cachedPosts)
+
+        if (cachedPosts.length === 0) {
+            // Если кэш пуст, загружаем первые посты
+            loadPosts(0);
+        } else {
+            cachedPosts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'post__div'
+                postElement.textContent = post.text !== '' ? post.text : 'Рекламный пост'
+                widget.appendChild(postElement);
+            });
+        }
+        widget.addEventListener('scroll', function() {
+          const dpr = window.devicePixelRatio || 1;
+          const scrollHeight = widget.scrollHeight * dpr;
+          const scrollTop = widget.scrollTop * dpr;
+          const clientHeight = widget.clientHeight * dpr;
+          // console.log(scrollTop, clientHeight, scrollHeight)
+          if (scrollTop + clientHeight + 1 >= scrollHeight) { // +1 на retina почему-то недокручивает последний пиксель
+            // Загрузка новых постов при прокрутке до конца
+            loadPosts(widget.children.length);
+            // console.log('Постов в ленте -', widget.children.length);
+          }
+        });
+    };
+
+    // Рассчитываем оставшееся место в хранилище
+    async function calculateStorageSize() {
+        let totaStoragelSize = 0;
+        let lsTotal = 0, xLen, x;
+          // Итерируемся по свойствам localStorage
+          for (x in localStorage) {
+          if (!localStorage.hasOwnProperty(x)) continue;
+              // Вычисляем размер каждого свойства хранилища
+              xLen = (localStorage[x].length + x.length) * 2;
+              lsTotal += xLen;
+          }
+        // Преобразуем размер хранилища в килобайты
+        totaStoragelSize = (lsTotal / 1024).toFixed(2)
+
+        const maxStorageSize = (10 * 1024).toFixed(2); // Принимаем максимальный размер хранилища в 10 МБ
+        console.log(`Занятое место: ${totaStoragelSize} kb / ${maxStorageSize} kb`);
+    }
+
+  </script>
+</body>
+</html>

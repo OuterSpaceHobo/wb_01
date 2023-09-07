@@ -1,0 +1,136 @@
+<!-- Необходимо реализовать простое поле ввода адреса с функцией геокодинга: 
+пользователь вводит данные в поле с помощью одного из геоинформационных сервисов 
+(Яндекс.Карты, ДаДата, GraphHopper), подбирается адрес. 
+Найденные данные должны отображаться в выпадающем списке, из которого можно выбрать подходящее значение.
+Реализовать дебоунсинг и защиту от троттлинга с помощью замыканий. -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Геокодинг адреса Yandex</title>
+  <style>
+    .container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: top;
+        align-items: center;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .address-input {
+        width: 400px;
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      margin-top: 5px;
+      background-color: #f9f9f9;
+      width: 400px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      z-index: 1;
+    }
+
+    .dropdown-content a {
+      color: black;
+      padding: 12px 16px;
+      text-decoration: none;
+      display: block;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Геокодинг адреса Yandex</h2>
+        <div class="dropdown">
+            <input class="address-input" type="text" id="address-input" placeholder="Введите адрес">
+            <div class="dropdown-content" id="address-dropdown"></div>
+        </div>
+    </div>
+
+  <script>
+    const input = document.getElementById("address-input");
+    const dropdown = document.getElementById("address-dropdown");
+
+    // Функция для геокодинга адреса с помощью Яндекс.Карты
+    function geocodeAddress() {
+
+      // Скрываем выдачу при пустой строке
+      if (!input.value)  {
+        dropdown.style.display = "none";
+        return 
+      }
+      const address = input.value;
+
+      // Очистка выпадающего списка перед новым запросом
+      dropdown.innerHTML = "";
+
+      // Запрос к API Яндекс.Карты для геокодинга адреса
+      const apiKey = "ecc0c536-f1c2-44ab-ac46-c552f8dc18d9";
+      const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&format=json&geocode=${encodeURIComponent(address)}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const suggestions = data.response.GeoObjectCollection.featureMember;
+          suggestions.forEach(suggestion => {
+            const address = suggestion.GeoObject.metaDataProperty.GeocoderMetaData.text;
+            const coordinates = suggestion.GeoObject.Point.pos;
+
+            const option = document.createElement("a");
+            option.textContent = address;
+            option.href = `https://yandex.com/maps/?ll=${coordinates}&z=15&text=${encodeURIComponent(address)}`;
+            option.target = "_blank";
+
+            option.addEventListener("click", event => {
+              event.preventDefault();
+              input.value = address;
+              dropdown.style.display = "none";
+            });
+
+            dropdown.appendChild(option);
+          });
+
+          // Отображение выпадающего списка
+          dropdown.style.display = "block";
+        })
+        .catch(error => {
+          console.log("Ошибка при геокодировании адреса:", error);
+        });
+    }
+
+    // Скрываем выдачу при потере фокуса
+    input.onblur = function() {
+        if (dropdown.style.display !== "none")
+            dropdown.style.display = "none";
+    }
+
+    // Защитная функция для обработки ввода 
+    const handleInput = (function(event) {
+        // console.log('handlin input')
+        let timerId;
+        return function() {
+            clearTimeout(timerId);
+            timerId = setTimeout(() => {
+            geocodeAddress();
+            }, 300);
+        };
+    })();
+
+    // Обработчик события ввода адреса
+    input.addEventListener("input", handleInput);
+
+  </script>
+</body>
+</html>

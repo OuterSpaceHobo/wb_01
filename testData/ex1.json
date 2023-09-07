@@ -1,0 +1,4 @@
+{      "name": "John"  , 
+"name1": "John1", "age": -30.123123  , "city": { "name": "New York", "age": false, "n": null }, 
+"arr": [1,{"asd": 3, "str": "aaaaaqa\\aaaa sdsdf=\"sdf"    },4,6]
+}

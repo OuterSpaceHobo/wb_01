@@ -1,0 +1,59 @@
+<!-- Задача на модули и использование внешних библиотек: напишите модуль, 
+который экспортирует функцию для работы с датами. 
+Внутри модуля используйте внешнюю библиотеку Moment.js для удобной работы с датами. -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Модуль для работы с датами</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+</head>
+<body>
+  <h1>Модуль для работы с датами</h1>
+  <h2>см. консоль</h2>
+
+  <script type="module">
+    // Модуль для работы с датами
+    const dateUtils = (function() {
+      // Форматирование даты с использованием Moment.js
+      function formatDate(date) {
+        return moment(date).format('DD.MM.YYYY');
+      }
+      return {
+        formatDate
+      };
+    })();
+
+    // Использование 
+    const currentDate = new Date();
+    const formattedDate = dateUtils.formatDate(currentDate);
+    console.log('Отформатированная дата:', formattedDate);
+  </script>
+
+</body>
+</html>
+
+<!-- 
+// Реализация с import/export 
+
+// Устанавливаем Moment.js, выполнив команду: npm install moment
+import moment from 'moment';
+
+// Экспортируем функцию для работы с датами
+export function formatDate(date, format) {
+  return moment(date).format(format);
+}
+
+export function getCurrentDate() {
+  return moment().format('YYYY-MM-DD');
+}
+
+// Пример использование модуля
+import { getCurrentDate, formatDate } from './dateUtils';
+
+const currentDate = getCurrentDate();
+console.log('Current date:', currentDate);
+
+const formattedDate = formatDate(new Date(), 'MMMM Do YYYY, h:mm:ss a');
+console.log('Formatted date:', formattedDate); 
+-->
